@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Registro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .registro-container {
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
+            width: 350px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        label {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0 15px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        input.error {
+            border: 2px solid #dc3545;
+            background-color: #ffe6e6;
+        }
+        input.success {
+            border: 2px solid #28a745;
+            background-color: #e6ffe6;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #28a745;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #218838;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .validation-info {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .validation-rule {
+            margin: 2px 0;
+        }
+        .validation-rule.valid {
+            color: #28a745;
+        }
+        .validation-rule.invalid {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+<div class="registro-container">
+    <h2>Crear Cuenta</h2>
+    <div id="messageContainer"></div>
+    
+    <form id="registroForm">
+        <label for="usuarioInput">Correo:</label>
+        <input type="email" name="usuario" id="usuarioInput" required>
+        
+        <label for="passwordInput">Contraseña:</label>
+        <input type="password" name="password" id="passwordInput" required>
+        
+        <div class="validation-info">
+            <div>La contraseña debe cumplir:</div>
+            <div id="minLength" class="validation-rule invalid">• Mínimo 8 caracteres</div>
+            <div id="hasUpper" class="validation-rule invalid">• 1 letra mayúscula</div>
+            <div id="hasLower" class="validation-rule invalid">• 1 letra minúscula</div>
+            <div id="hasNumber" class="validation-rule invalid">• 1 número</div>
+            <div id="hasSpecial" class="validation-rule invalid">• 1 carácter especial (_ - / @ # $ % & *)</div>
+        </div>
+        
+        <button type="submit" id="submitBtn">Registrarse</button>
+    </form>
+    
+    <div style="text-align: center; margin-top: 15px;">
+        <a href="index.html" style="color: #007BFF; text-decoration: none;">Volver al login</a>
+    </div>
+</div>
+
+<script>
+    // Referencias a los elementos
+    const form = document.getElementById('registroForm');
+    const usuarioInput = document.getElementById('usuarioInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const messageContainer = document.getElementById('messageContainer');
+    
+    // Referencias a las reglas de validación
+    const minLengthRule = document.getElementById('minLength');
+    const hasUpperRule = document.getElementById('hasUpper');
+    const hasLowerRule = document.getElementById('hasLower');
+    const hasNumberRule = document.getElementById('hasNumber');
+    const hasSpecialRule = document.getElementById('hasSpecial');
+    
+    // Función para mostrar mensajes
+    function showMessage(message, type) {
+        messageContainer.innerHTML = `<div class="message ${type}">${message}</div>`;
+    }
+    
+    // Función para validar formato de correo electrónico (más estricta)
+    function validateEmail(email) {
+        // Verificar que no esté vacío
+        if (!email || email.trim() === '') return false;
+        
+        // Verificar longitud máxima (320 caracteres es el límite estándar)
+        if (email.length > 320) return false;
+        
+        // Verificar que no tenga espacios
+        if (/\s/.test(email)) return false;
+        
+        // Verificar estructura básica
+        const basicStructure = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+        if (!basicStructure.test(email)) return false;
+        
+        // Dividir en partes locales y dominio
+        const parts = email.split('@');
+        if (parts.length !== 2) return false;
+        
+        const [localPart, domain] = parts;
+        
+        // Validar parte local (antes del @)
+        if (!validateLocalPart(localPart)) return false;
+        
+        // Validar dominio
+        if (!validateDomain(domain)) return false;
+        
+        return true;
+    }
+    
+    // Función para validar la parte local del correo (antes del @)
+    function validateLocalPart(localPart) {
+        // No debe estar vacía
+        if (!localPart || localPart.length === 0) return false;
+        
+        // Longitud máxima de 64 caracteres
+        if (localPart.length > 64) return false;
+        
+        // No debe empezar o terminar con punto
+        if (localPart.startsWith('.') || localPart.endsWith('.')) return false;
+        
+        // No debe tener puntos consecutivos
+        if (localPart.includes('..')) return false;
+        
+        // Caracteres permitidos: letras, números, puntos, guiones, guiones bajos
+        const allowedChars = /^[a-zA-Z0-9._-]+$/;
+        if (!allowedChars.test(localPart)) return false;
+        
+        return true;
+    }
+    
+    // Función para validar el dominio
+    function validateDomain(domain) {
+        // No debe estar vacío
+        if (!domain || domain.length === 0) return false;
+        
+        // Longitud máxima de 255 caracteres
+        if (domain.length > 255) return false;
+        
+        // Debe tener al menos un punto
+        if (!domain.includes('.')) return false;
+        
+        // No debe empezar o terminar con punto o guión
+        if (domain.startsWith('.') || domain.endsWith('.') || 
+            domain.startsWith('-') || domain.endsWith('-')) return false;
+        
+        // Dividir en partes por punto
+        const domainParts = domain.split('.');
+        
+        // Debe tener al menos 2 partes
+        if (domainParts.length < 2) return false;
+        
+        // Validar cada parte del dominio
+        for (let part of domainParts) {
+            if (!part || part.length === 0) return false;
+            if (part.length > 63) return false; // Máximo 63 caracteres por parte
+            
+            // No debe empezar o terminar con guión
+            if (part.startsWith('-') || part.endsWith('-')) return false;
+            
+            // Solo letras, números y guiones
+            if (!/^[a-zA-Z0-9-]+$/.test(part)) return false;
+        }
+        
+        // La última parte (TLD) debe ser solo letras y tener al menos 2 caracteres
+        const tld = domainParts[domainParts.length - 1];
+        if (!/^[a-zA-Z]{2,}$/.test(tld)) return false;
+        
+        return true;
+    }
+    
+    // Función para validar contraseña
+    function validatePassword(password) {
+        const validations = {
+            minLength: password.length >= 8,
+            hasUpper: /[A-Z]/.test(password),
+            hasLower: /[a-z]/.test(password),
+            hasNumber: /[0-9]/.test(password),
+            hasSpecial: /[_\-\/@#$%&*]/.test(password)
+        };
+        
+        // Actualizar indicadores visuales
+        minLengthRule.className = 'validation-rule ' + (validations.minLength ? 'valid' : 'invalid');
+        hasUpperRule.className = 'validation-rule ' + (validations.hasUpper ? 'valid' : 'invalid');
+        hasLowerRule.className = 'validation-rule ' + (validations.hasLower ? 'valid' : 'invalid');
+        hasNumberRule.className = 'validation-rule ' + (validations.hasNumber ? 'valid' : 'invalid');
+        hasSpecialRule.className = 'validation-rule ' + (validations.hasSpecial ? 'valid' : 'invalid');
+        
+        return validations.minLength && validations.hasUpper && validations.hasLower && validations.hasNumber && validations.hasSpecial;
+    }
+    
+    // Validación en tiempo real para el campo de usuario
+    usuarioInput.addEventListener('input', function() {
+        const email = this.value;
+        if (email.length > 0) {
+            if (validateEmail(email)) {
+                this.className = 'success';
+            } else {
+                this.className = 'error';
+            }
+        } else {
+            this.className = '';
+        }
+    });
+    
+    // Validación en tiempo real para el campo de contraseña
+    passwordInput.addEventListener('input', function() {
+        const password = this.value;
+        if (password.length > 0) {
+            if (validatePassword(password)) {
+                this.className = 'success';
+            } else {
+                this.className = 'error';
+            }
+        } else {
+            this.className = '';
+            // Resetear todas las reglas a inválido
+            minLengthRule.className = 'validation-rule invalid';
+            hasUpperRule.className = 'validation-rule invalid';
+            hasLowerRule.className = 'validation-rule invalid';
+            hasNumberRule.className = 'validation-rule invalid';
+            hasSpecialRule.className = 'validation-rule invalid';
+        }
+    });
+    
+    // Función principal de validación y captura de valores
+    function capturarYValidar() {
+        // Capturar valores
+        const usuario = usuarioInput.value.trim();
+        const password = passwordInput.value;
+        
+        // Limpiar mensajes previos
+        messageContainer.innerHTML = '';
+        
+        // Array para almacenar errores
+        let errores = [];
+        
+    // Función para obtener errores específicos del correo
+    function getEmailErrors(email) {
+        const errors = [];
+        
+        if (!email || email.trim() === '') {
+            errors.push('El correo no puede estar vacío');
+            // Validar correo electrónico con errores específicos
+        const emailErrors = getEmailErrors(usuario);
+        if (emailErrors.length > 0) {
+            errores = errores.concat(emailErrors);
+        }
+        }
+        
+        if (email.length > 320) {
+            errors.push('El correo es demasiado largo (máximo 320 caracteres)');
+        }
+        
+        if (/\s/.test(email)) {
+            errors.push('El correo no puede contener espacios');
+        }
+        
+        const basicStructure = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+        if (!basicStructure.test(email)) {
+            errors.push('Formato básico incorrecto (debe ser usuario@dominio.com)');
+            return errors;
+        }
+        
+        const parts = email.split('@');
+        if (parts.length !== 2) {
+            errors.push('Debe contener exactamente un símbolo @');
+            return errors;
+        }
+        
+        const [localPart, domain] = parts;
+        
+        // Validar parte local
+        if (localPart.length > 64) {
+            errors.push('La parte antes del @ es demasiado larga (máximo 64 caracteres)');
+        }
+        if (localPart.startsWith('.') || localPart.endsWith('.')) {
+            errors.push('La parte antes del @ no puede empezar o terminar con punto');
+        }
+        if (localPart.includes('..')) {
+            errors.push('La parte antes del @ no puede tener puntos consecutivos');
+        }
+        if (!/^[a-zA-Z0-9._-]+$/.test(localPart)) {
+            errors.push('La parte antes del @ solo puede contener letras, números, puntos, guiones y guiones bajos');
+        }
+        
+        // Validar dominio
+        if (domain.length > 255) {
+            errors.push('El dominio es demasiado largo');
+        }
+        if (!domain.includes('.')) {
+            errors.push('El dominio debe contener al menos un punto');
+        }
+        if (domain.startsWith('.') || domain.endsWith('.') || 
+            domain.startsWith('-') || domain.endsWith('-')) {
+            errors.push('El dominio no puede empezar o terminar con punto o guión');
+        }
+        
+        const domainParts = domain.split('.');
+        if (domainParts.length < 2) {
+            errors.push('El dominio debe tener al menos dos partes separadas por punto');
+        }
+        
+        const tld = domainParts[domainParts.length - 1];
+        if (!/^[a-zA-Z]{2,}$/.test(tld)) {
+            errors.push('La extensión del dominio (.com, .org, etc.) debe ser solo letras y tener al menos 2 caracteres');
+        }
+        
+        return errors;
+    }
+        
+        // Validar contraseña
+        if (!password) {
+            errores.push('El campo de contraseña es requerido');
+        } else if (!validatePassword(password)) {
+            errores.push('La contraseña no cumple con los requisitos');
+        }
+        
+        // Mostrar resultados
+        if (errores.length > 0) {
+            showMessage('Errores encontrados:<br>• ' + errores.join('<br>• '), 'error');
+            return false;
+        } else {
+            showMessage('Validación exitosa. Datos capturados:<br>Usuario: ' + usuario + '<br>Contraseña: ✓ Cumple todos los requisitos', 'success');
+            
+            // Aquí normalmente enviarías los datos al servidor
+            // Por ahora solo simulamos el envío después de 2 segundos
+            setTimeout(() => {
+                // Crear formulario para envío real
+                const realForm = document.createElement('form');
+                realForm.method = 'POST';
+                realForm.action = 'RegistroServlet';
+                
+                const userInput = document.createElement('input');
+                userInput.type = 'hidden';
+                userInput.name = 'usuario';
+                userInput.value = usuario;
+                
+                const passInput = document.createElement('input');
+                passInput.type = 'hidden';
+                passInput.name = 'password';
+                passInput.value = password;
+                
+                realForm.appendChild(userInput);
+                realForm.appendChild(passInput);
+                document.body.appendChild(realForm);
+                realForm.submit();
+            }, 2000);
+            
+            return true;
+        }
+    }
+    
+    // Asociar función al evento submit del formulario
+    form.addEventListener('submit', function(e) {
+        e.preventDefault(); // Prevenir envío normal del formulario
+        capturarYValidar();
+    });
+    
+    // También asociar al botón directamente
+    submitBtn.addEventListener('click', function(e) {
+        if (e.target.closest('form')) {
+            // Si está dentro del form, el evento submit se encargará
+            return;
+        }
+        e.preventDefault();
+        capturarYValidar();
+    });
+</script>
+</body>
+</html>
